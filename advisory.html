@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>千问AI购物助手 · 建议型</title>
+<style>
+  /* ── Reset & base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 16px; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    background: #F5F5F7;
+    color: #1D1D1F;
+    min-height: 100vh;
+  }
+
+  /* ── Phone shell ── */
+  .shell {
+    max-width: 390px;
+    margin: 0 auto;
+    min-height: 100vh;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 40px rgba(0,0,0,0.12);
+    position: relative;
+  }
+
+  /* ── Status bar ── */
+  .statusbar {
+    background: #fff;
+    padding: 12px 20px 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1D1D1F;
+    border-bottom: 1px solid #F0F0F0;
+  }
+  .statusbar-right { display: flex; gap: 6px; align-items: center; }
+  .signal-bar { display: flex; gap: 1.5px; align-items: flex-end; }
+  .signal-bar span { background: #1D1D1F; border-radius: 1px; width: 3px; }
+  .signal-bar span:nth-child(1) { height: 4px; }
+  .signal-bar span:nth-child(2) { height: 6px; }
+  .signal-bar span:nth-child(3) { height: 8px; }
+  .signal-bar span:nth-child(4) { height: 10px; }
+  .battery {
+    width: 22px; height: 11px;
+    border: 1.5px solid #1D1D1F;
+    border-radius: 2px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 1.5px;
+  }
+  .battery::after {
+    content: '';
+    position: absolute;
+    right: -4px;
+    width: 2px; height: 5px;
+    background: #1D1D1F;
+    border-radius: 0 1px 1px 0;
+  }
+  .battery-inner { background: #1D1D1F; height: 100%; width: 75%; border-radius: 1px; }
+
+  /* ── App header ── */
+  .app-header {
+    background: #fff;
+    padding: 10px 16px 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid #F0F0F0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .app-avatar {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .app-info { flex: 1; }
+  .app-name { font-size: 15px; font-weight: 600; color: #1D1D1F; }
+  .app-status { font-size: 12px; color: #34C759; margin-top: 1px; }
+  .app-badge {
+    background: #F0F0F5;
+    color: #6366F1;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 20px;
+  }
+
+  /* ── Intro banner ── */
+  .intro-banner {
+    margin: 12px;
+    padding: 12px 14px;
+    background: #F0F0F5;
+    border-radius: 12px;
+    border-left: 3px solid #6366F1;
+  }
+  .intro-banner p {
+    font-size: 13px;
+    line-height: 1.6;
+    color: #444;
+  }
+  .intro-banner strong { color: #1D1D1F; }
+
+  /* ── Chat area ── */
+  .chat-area {
+    flex: 1;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+  }
+
+  /* ── Message bubbles ── */
+  .msg-row { display: flex; gap: 8px; align-items: flex-end; }
+  .msg-row.user { flex-direction: row-reverse; }
+
+  .msg-avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366F1, #8B5CF6);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 12px; font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .bubble {
+    max-width: 78%;
+    padding: 10px 13px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .bubble-ai {
+    background: #F2F2F7;
+    color: #1D1D1F;
+    border-radius: 4px 16px 16px 16px;
+  }
+  .bubble-user {
+    background: #6366F1;
+    color: #fff;
+    border-radius: 16px 4px 16px 16px;
+  }
+
+  /* ── Typing indicator ── */
+  .typing { display: flex; gap: 4px; padding: 10px 13px; align-items: center; }
+  .typing span {
+    width: 7px; height: 7px;
+    background: #C7C7CC;
+    border-radius: 50%;
+    animation: bounce 1.2s infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: .2s; }
+  .typing span:nth-child(3) { animation-delay: .4s; }
+  @keyframes bounce {
+    0%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-6px); }
+  }
+
+  /* ── Product cards ── */
+  .products-label {
+    font-size: 12px;
+    color: #8E8E93;
+    margin: 0 0 8px 36px;
+  }
+  .products-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-left: 36px;
+  }
+  .product-card {
+    background: #fff;
+    border: 1.5px solid #E5E5EA;
+    border-radius: 14px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: border-color .15s, box-shadow .15s;
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .product-card:hover { border-color: #6366F1; box-shadow: 0 2px 12px rgba(99,102,241,.1); }
+  .product-card.selected {
+    border-color: #34C759;
+    background: #F0FDF4;
+  }
+  .product-card.selected::after {
+    content: '✓ 已选择';
+    position: absolute;
+    top: 10px; right: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #34C759;
+  }
+  .product-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+  .product-name { font-size: 14px; font-weight: 600; color: #1D1D1F; }
+  .product-price { font-size: 15px; font-weight: 700; color: #6366F1; }
+  .product-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 6px; }
+  .tag {
+    background: #F2F2F7;
+    color: #636366;
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 20px;
+  }
+  .product-stars { font-size: 11px; color: #FF9F0A; }
+  .product-reviews { font-size: 11px; color: #8E8E93; margin-left: 4px; }
+  .product-hint {
+    font-size: 12px;
+    color: #8E8E93;
+    margin-top: 5px;
+    line-height: 1.4;
+  }
+
+  /* ── Action area ── */
+  .action-area {
+    padding: 10px 12px 0;
+  }
+  .action-card {
+    background: #F2F2F7;
+    border-radius: 14px;
+    padding: 12px 14px;
+    font-size: 13px;
+    color: #444;
+    line-height: 1.5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .action-card .icon { font-size: 18px; flex-shrink: 0; }
+
+  /* ── Confirm button ── */
+  .confirm-btn {
+    display: block;
+    width: calc(100% - 24px);
+    margin: 10px 12px;
+    padding: 14px;
+    background: #6366F1;
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s, transform .1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .confirm-btn:hover { background: #4F46E5; }
+  .confirm-btn:active { transform: scale(0.98); }
+  .confirm-btn:disabled { background: #C7C7CC; cursor: not-allowed; }
+
+  /* ── Success screen ── */
+  .success-screen {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    padding: 40px 24px;
+    text-align: center;
+  }
+  .success-screen.show { display: flex; }
+  .success-icon {
+    width: 72px; height: 72px;
+    background: #34C759;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+    margin-bottom: 20px;
+    animation: popIn .4s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes popIn {
+    from { transform: scale(0); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .success-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .success-sub { font-size: 14px; color: #636366; line-height: 1.6; margin-bottom: 24px; }
+  .order-summary {
+    background: #F2F2F7;
+    border-radius: 14px;
+    padding: 14px 18px;
+    width: 100%;
+    margin-bottom: 28px;
+    text-align: left;
+  }
+  .order-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px; }
+  .order-row:last-child { margin-bottom: 0; }
+  .order-label { color: #636366; }
+  .order-value { font-weight: 500; }
+  .order-value.price { color: #6366F1; font-weight: 700; }
+
+  .code-box {
+    background: #fff;
+    border: 2px dashed #6366F1;
+    border-radius: 14px;
+    padding: 18px 24px;
+    width: 100%;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+  .code-label { font-size: 12px; color: #8E8E93; margin-bottom: 6px; }
+  .code-value { font-size: 28px; font-weight: 800; color: #6366F1; letter-spacing: 4px; }
+  .code-hint { font-size: 12px; color: #8E8E93; margin-top: 6px; }
+
+  .back-btn {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    background: transparent;
+    color: #6366F1;
+    border: 1.5px solid #6366F1;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ── Input area ── */
+  .input-area {
+    padding: 8px 12px 16px;
+    border-top: 1px solid #F0F0F0;
+    background: #fff;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .chat-input {
+    flex: 1;
+    padding: 9px 13px;
+    background: #F2F2F7;
+    border: none;
+    border-radius: 20px;
+    font-size: 14px;
+    color: #1D1D1F;
+    outline: none;
+  }
+  .chat-input::placeholder { color: #C7C7CC; }
+  .send-btn {
+    width: 36px; height: 36px;
+    background: #6366F1;
+    border: none;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ── Misc ── */
+  .timestamp {
+    font-size: 11px;
+    color: #C7C7CC;
+    text-align: center;
+    margin: 4px 0;
+  }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- Status bar -->
+  <div class="statusbar">
+    <span>9:41</span>
+    <div class="statusbar-right">
+      <div class="signal-bar">
+        <span></span><span></span><span></span><span></span>
+      </div>
+      <div class="battery"><div class="battery-inner"></div></div>
+    </div>
+  </div>
+
+  <!-- App header -->
+  <div class="app-header">
+    <div class="app-avatar">千</div>
+    <div class="app-info">
+      <div class="app-name">千问AI购物助手</div>
+      <div class="app-status">● 在线</div>
+    </div>
+    <div class="app-badge">建议型</div>
+  </div>
+
+  <!-- 主界面（聊天） -->
+  <div id="chat-view" style="display:flex; flex-direction:column; flex:1;">
+
+    <!-- 产品介绍说明 -->
+    <div class="intro-banner">
+      <p><strong>建议型AI购物助手</strong>：该助手会根据您的需求，为您提供多款候选商品及推荐理由，<strong>最终购买决策由您自己做出</strong>。</p>
+    </div>
+
+    <!-- 情景卡片 -->
+    <div style="margin:0 12px 4px; padding:11px 13px; background:#FFF9EC; border-radius:12px; border-left:3px solid #FF9F0A;">
+      <p style="font-size:13px; color:#555; line-height:1.6;">
+        🕒 <strong>情景：</strong>现在是周三下午三点，您在开会间隙的10分钟休息时间，想趁这个空档点一杯下午茶，但不确定选哪款。您打开了手机上的<strong>千问AI购物助手</strong>。
+      </p>
+    </div>
+
+    <!-- 聊天区 -->
+    <div class="chat-area" id="chat-area">
+      <div class="timestamp">今天 15:02</div>
+
+      <!-- AI 开场 -->
+      <div class="msg-row">
+        <div class="msg-avatar">千</div>
+        <div class="bubble bubble-ai">您好！我是千问AI购物助手，可以帮您搜索、比较和推荐商品。请问今天有什么可以帮您的？</div>
+      </div>
+
+      <!-- 用户提问 -->
+      <div class="msg-row user">
+        <div class="bubble bubble-user">帮我推荐一杯奶茶，不太甜，口感清爽，预算25元以内 😊</div>
+      </div>
+
+      <!-- AI 正在思考 -->
+      <div class="msg-row" id="typing-row">
+        <div class="msg-avatar">千</div>
+        <div class="bubble bubble-ai">
+          <div class="typing"><span></span><span></span><span></span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 产品推荐区（初始隐藏） -->
+    <div id="product-area" class="hidden">
+      <div style="padding:0 12px;">
+
+        <!-- AI 回复 -->
+        <div class="msg-row" style="margin-bottom:8px;">
+          <div class="msg-avatar">千</div>
+          <div class="bubble bubble-ai">
+            已为您从附近门店筛选出 <strong>3款</strong> 口碑最佳、符合您口味偏好的奶茶。请查看推荐，<strong>由您选择最心仪的一款</strong>，我会为您下单 ☕
+          </div>
+        </div>
+
+        <div class="products-label">为您推荐 · 点击选择</div>
+        <div class="products-grid" id="products-grid">
+
+          <!-- 商品1 -->
+          <div class="product-card" id="card-0" onclick="selectProduct(0)">
+            <div class="product-top">
+              <div class="product-name">茉莉奶绿</div>
+              <div class="product-price">¥22</div>
+            </div>
+            <div class="product-tags">
+              <span class="tag">微甜</span>
+              <span class="tag">清新茶香</span>
+              <span class="tag">喜茶</span>
+            </div>
+            <div>
+              <span class="product-stars">★★★★☆</span>
+              <span class="product-reviews">4.7分 · 2,341条评价</span>
+            </div>
+            <div class="product-hint">✦ 茉莉花与绿茶的清爽组合，甜度低，口感清冽</div>
+          </div>
+
+          <!-- 商品2 -->
+          <div class="product-card" id="card-1" onclick="selectProduct(1)">
+            <div class="product-top">
+              <div class="product-name">桂花乌龙拿铁</div>
+              <div class="product-price">¥24</div>
+            </div>
+            <div class="product-tags">
+              <span class="tag">微甜</span>
+              <span class="tag">桂花香</span>
+              <span class="tag">奈雪的茶</span>
+            </div>
+            <div>
+              <span class="product-stars">★★★★★</span>
+              <span class="product-reviews">4.9分 · 3,892条评价</span>
+            </div>
+            <div class="product-hint">✦ 本周附近门店销量第一，桂花香气浓郁，不腻</div>
+          </div>
+
+          <!-- 商品3 -->
+          <div class="product-card" id="card-2" onclick="selectProduct(2)">
+            <div class="product-top">
+              <div class="product-name">芝芝莓莓</div>
+              <div class="product-price">¥23</div>
+            </div>
+            <div class="product-tags">
+              <span class="tag">少甜</span>
+              <span class="tag">果味</span>
+              <span class="tag">霸王茶姬</span>
+            </div>
+            <div>
+              <span class="product-stars">★★★★☆</span>
+              <span class="product-reviews">4.6分 · 1,756条评价</span>
+            </div>
+            <div class="product-hint">✦ 草莓果粒+芝士奶盖，清爽不腻，果味突出</div>
+          </div>
+
+        </div>
+
+        <!-- 操作提示 -->
+        <div class="action-area">
+          <div class="action-card" id="select-hint">
+            <span class="icon">👆</span>
+            <span>请点击上方您心仪的商品，然后点击确认下单</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 确认按钮 -->
+    <div id="confirm-area" class="hidden">
+      <div style="padding:0 12px; margin-top:8px;">
+        <div class="action-card" id="selected-hint" style="background:#F0FDF4; margin-bottom:8px;">
+          <span class="icon">✅</span>
+          <span id="selected-text">已选择商品</span>
+        </div>
+      </div>
+      <button class="confirm-btn" id="confirm-btn" onclick="confirmOrder()">确认下单</button>
+    </div>
+
+    <!-- 输入框 -->
+    <div class="input-area" id="input-area-main">
+      <input class="chat-input" placeholder="选择商品后点击确认下单" disabled>
+      <button class="send-btn" disabled>↑</button>
+    </div>
+  </div>
+
+  <!-- 成功页面 -->
+  <div class="success-screen" id="success-screen">
+    <div class="success-icon">✓</div>
+    <div class="success-title">下单成功！</div>
+    <div class="success-sub">您选择的商品已提交，<br>预计20分钟内送达。</div>
+
+    <div class="order-summary">
+      <div class="order-row">
+        <span class="order-label">商品</span>
+        <span class="order-value" id="order-product">—</span>
+      </div>
+      <div class="order-row">
+        <span class="order-label">金额</span>
+        <span class="order-value price" id="order-price">—</span>
+      </div>
+      <div class="order-row">
+        <span class="order-label">门店</span>
+        <span class="order-value">附近推荐门店</span>
+      </div>
+      <div class="order-row">
+        <span class="order-label">预计送达</span>
+        <span class="order-value">20分钟内</span>
+      </div>
+    </div>
+
+    <div class="code-box">
+      <div class="code-label">请将以下完成码填入问卷</div>
+      <div class="code-value">ADV-2024</div>
+      <div class="code-hint">复制此码后返回 Credamo 问卷继续填写</div>
+    </div>
+
+    <button class="back-btn" onclick="window.history.back()">← 返回问卷</button>
+  </div>
+
+</div>
+
+<script>
+  const PRODUCTS = [
+    { name: '茉莉奶绿', price: '¥22', store: '喜茶' },
+    { name: '桂花乌龙拿铁', price: '¥24', store: '奈雪的茶' },
+    { name: '芝芝莓莓', price: '¥23', store: '霸王茶姬' },
+  ];
+
+  let selected = null;
+
+  // 延迟显示推荐
+  setTimeout(() => {
+    document.getElementById('typing-row').remove();
+    document.getElementById('product-area').classList.remove('hidden');
+    document.getElementById('product-area').style.display = 'block';
+    // 滚动到底部
+    const ca = document.getElementById('chat-area');
+    ca.scrollTop = ca.scrollHeight;
+  }, 1800);
+
+  function selectProduct(idx) {
+    // 清除之前选中
+    document.querySelectorAll('.product-card').forEach(c => c.classList.remove('selected'));
+    document.getElementById('card-' + idx).classList.add('selected');
+    selected = idx;
+
+    // 显示确认区
+    const confirmArea = document.getElementById('confirm-area');
+    confirmArea.classList.remove('hidden');
+    confirmArea.style.display = 'block';
+
+    const p = PRODUCTS[idx];
+    document.getElementById('selected-text').textContent =
+      '已选择：' + p.name + ' ' + p.price + '  · 点击下方确认下单';
+  }
+
+  function confirmOrder() {
+    if (selected === null) return;
+    const p = PRODUCTS[selected];
+    document.getElementById('order-product').textContent = p.name + '（' + p.store + '）';
+    document.getElementById('order-price').textContent = p.price;
+
+    document.getElementById('chat-view').style.display = 'none';
+    const ss = document.getElementById('success-screen');
+    ss.classList.add('show');
+    ss.style.display = 'flex';
+  }
+</script>
+</body>
+</html>
