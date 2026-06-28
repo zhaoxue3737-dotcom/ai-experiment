@@ -363,9 +363,27 @@ async function aiPlaceOrder(){
   chatArea.appendChild(w);
   chatArea.scrollIntoView({behavior:'smooth',block:'end'});
   updateStep(5);
-  setAction(`<div class="notice" style="background:#F0FDF4;border-color:#BBF7D0;border-left-color:#16A34A;color:#14532D;">
-    <strong>✅ 体验完成！</strong><br>请返回见数问卷，继续完成接下来的量表作答。感谢你的参与！
-  </div>`);
+  setAction(`
+    <div class="notice" style="background:#F0FDF4;border-color:#BBF7D0;border-left-color:#16A34A;color:#14532D;margin-bottom:12px;">
+      <strong>✅ 体验完成！</strong><br>请点击下方按钮返回问卷，继续完成接下来的量表作答。
+    </div>
+    <button onclick="returnToSurvey()" style="width:100%;padding:14px;background:#16A34A;color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.5px;">
+      ✅ 已完成体验，返回问卷继续作答
+    </button>`);
+}
+
+function returnToSurvey() {
+  // 方法1：通知父页面（见数 iframe 场景）
+  try { window.parent.postMessage('surveyIframeClose', '*'); } catch(e){}
+  try { window.parent.postMessage({ action:'close' }, '*'); } catch(e){}
+  // 方法2：直接关闭当前窗口（新标签页场景）
+  try { window.close(); } catch(e){}
+  // 方法3：返回上一页
+  try { if(window.history.length > 1) window.history.back(); } catch(e){}
+  // 兜底：提示手动操作
+  setTimeout(()=>{
+    alert('请手动关闭此页面或点击浏览器返回键，回到问卷继续作答。');
+  }, 400);
 }
 
 step0();
